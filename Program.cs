@@ -23,6 +23,11 @@ namespace Bertozzi.Mattia._4H.SaveRecord
             //Rileggere il file binario in una List<Comune>
             c.Load();
             Console.WriteLine($"Ho letto {c.Count} righe dal file binario.");
+
+            Console.WriteLine($"Inserire un numero: ");
+            string strNumero = Console.ReadLine();
+            Comune comune = c.RicercaComune(Convert.ToInt32(strNumero));
+            Console.WriteLine(comune);
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Text;
 using System.IO;
 using System;
 using System.Collections.Generic;
@@ -8,8 +9,51 @@ namespace Bertozzi.Mattia._4H.SaveRecord.Models
     public class Comune
     {
         public int ID {get;set;}
-        public string NomeComune {get;set;}
-        public string CodiceCatastale {get;set;}
+
+        private string _nomeComune;
+        public string NomeComune 
+        {
+            get=>_nomeComune;
+            set
+            {
+                /*
+                Lunghezza record = 32
+                ID = 4 Byte
+                CodiceCatastale=4+1
+                NomeComune == 22+1
+                */
+                if(value.Length==22)
+                {
+                    _nomeComune=value;
+                }
+                if(value.Length<22)
+                    value = value.PadRight(22);
+                else if(value.Length>22)
+                    value = value.Substring(0,22);
+
+                _nomeComune=value;
+                
+            }
+        }
+        private string _codiceCatastale;
+        public string CodiceCatastale 
+        {
+            get=>_codiceCatastale;
+
+            set
+            {
+                if(value.Length==4)
+                {
+                    _codiceCatastale=value;
+                }
+                if(value.Length<4)
+                    value = value.PadRight(4);
+                else if(value.Length>4)
+                    value = value.Substring(0,4);
+
+                _codiceCatastale=value;
+            }
+        }
 
         public Comune(){}
 
@@ -24,6 +68,14 @@ namespace Bertozzi.Mattia._4H.SaveRecord.Models
             CodiceCatastale = colonne[0];
             NomeComune = colonne[1];
             
+        }
+        public override string ToString()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"ID: {ID}");
+            sb.AppendLine($"Codice Catastale: {CodiceCatastale}");
+            sb.AppendLine($"NomeComune: {NomeComune}");
+            return sb.ToString();
         }
     }
     public class Comuni : List<Comune> //Comuni è un List<Comune>
@@ -63,17 +115,19 @@ namespace Bertozzi.Mattia._4H.SaveRecord.Models
         
         public void Save(string fileName)
         {
-            FileStream fout= new FileStream(fileName,FileMode.Create);
-            BinaryWriter writer = new BinaryWriter(fout);
-
-            foreach(Comune comune in this)
+            using(FileStream fout= new FileStream(fileName,FileMode.Create))
             {
+               BinaryWriter writer = new BinaryWriter(fout);
+
+                foreach(Comune comune in this)
+                {
                 writer.Write(comune.ID);
                 writer.Write(comune.CodiceCatastale);
                 writer.Write(comune.NomeComune);
-            }
-            writer.Flush();
-            writer.Close();
+                }
+                writer.Flush();
+                writer.Close(); 
+            }             
         }
 
         public void Load()
@@ -87,23 +141,44 @@ namespace Bertozzi.Mattia._4H.SaveRecord.Models
             //devo cancellare gli altri 8218 record per poi ricompilare con i nuovi
             this.Clear();
 
-            FileStream fin = new FileStream(fileName,FileMode.Open);
-            BinaryReader reader = new BinaryReader(fin);
+            using(FileStream fin= new FileStream(fileName,FileMode.Open))
+            {
+                BinaryReader reader = new BinaryReader(fin);
 
-            //fare un do while con ste robe
-            Comune c = new Comune();
-            //leggo l'ID
-            c.ID= reader.ReadInt32();
-            //leggo il CodiceCatastale
-            c.CodiceCatastale= reader.ReadString();
-            //leggo il Nome
-            c.NomeComune= reader.ReadString();
-            Add(c);
+                //fare un do while con ste robe
+                Comune c = new Comune();
+
+                while(reader.BaseStream.Position != reader.BaseStream.Length)
+                {
+                    c.ID= reader.ReadInt32();
+                    //leggo il CodiceCatastale
+                    c.CodiceCatastale= reader.ReadString();
+                    //leggo il Nome
+                    c.NomeComune= reader.ReadString();
+                    Add(c);
+                }
+
+            }
 
             //il modo + corretto di accorgersi della fine del file...?
             //manca un while che legge tutte le righe
             //come si fa ad accorgersi della fine del file?
 
+        }
+
+        public Comune RicercaComune(int numero)
+        {
+            FileStream fin = new FileStream("Comuni.bin",FileMode.Open);
+            BinaryReader reader = new BinaryReader(fin);
+            
+            fin.Seek((numero-1)*32,SeekOrigin.Begin);
+            Comune c = new Comune();
+            c.ID = reader.ReadInt32();
+            c.CodiceCatastale= reader.ReadString();
+            c.NomeComune= reader.ReadString();
+
+
+            return c;
         }
     }
 
